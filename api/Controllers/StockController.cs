@@ -12,16 +12,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace api.Controllers
 {
-    [Route("api/controller")]
+    [Route("api/stock")]
     [ApiController]
     public class StockController:ControllerBase
     {
-        private readonly AppDbContext _context;
         private readonly IStockRepository _stockRepo;
-        public StockController(AppDbContext context,IStockRepository stockRepo)
+        public StockController(IStockRepository stockRepo)
         {
             _stockRepo=stockRepo;
-            _context=context; 
         }
 
         [HttpGet]
