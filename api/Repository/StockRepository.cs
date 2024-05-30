@@ -1,13 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Threading.Tasks;
 using api.Data;
 using api.Dtos.Stock;
 using api.Helpers;
 using api.Interfaces;
-using api.Mappers;
 using api.Model;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,63 +18,69 @@ namespace api.Repository
 
 
 
-        public async Task<List<Stock>> GetAllAsync(QueryObject query)
+        public async Task<IEnumerable<StockModel>> GetAllAsync(QueryObject query)
         {
-            var stocks = _context.Stocks.Include(c => c.Comments).AsQueryable();
+            var records = _context.Stocks.AsQueryable();
 
 
-            stocks = stocks.Where(c => c.CompanyName.Contains(query.CompanyName!));
+            records = records.Where(c => c.CompanyName.Contains(query.CompanyName!));
 
-            stocks = stocks.Where(c => c.Symbol.Contains(query.Symbol!));
+            records = records.Where(c => c.Symbol.Contains(query.Symbol!));
             if (!string.IsNullOrWhiteSpace(query.SortBy))
             {
                 if (query.SortBy.Equals("Symbol", StringComparison.OrdinalIgnoreCase))
                 {
-                    stocks = query.IsDescending ? stocks.OrderByDescending(s => s.Symbol) : stocks.OrderBy(s => s.Symbol);
+                    records = query.IsDescending ? records.OrderByDescending(s => s.Symbol) : records.OrderBy(s => s.Symbol);
                 }
             }
 
             var skipNumber = (query.PagesNumber - 1) * query.PagesSize;
-            return await stocks.Skip(skipNumber).Take(query.PagesSize).ToListAsync();
+            return await records.Skip(skipNumber).Take(query.PagesSize).ToListAsync();
         }
 
-        public async Task<Stock?> GetByIdAsync(int id)
+        public async Task<StockModel?> GetByIdAsync(Guid id)
         {
-            return await _context.Stocks.Include(c => c.Comments).FirstOrDefaultAsync(x => x.Id == id);
+            var record = await _context.Stocks.SingleOrDefaultAsync(x => x.Id == id);
+
+            return record;
         }
-        public async Task<Stock> CreateAsync(Stock stockModel)
+        public async Task<bool> CreateAsync(StockModel stockModel)
         {
             await _context.Stocks.AddAsync(stockModel);
             await _context.SaveChangesAsync();
-            return stockModel;
+
+            return true;
         }
 
-        public async Task<Stock?> RemoveAsync(int id)
+        public async Task<bool> RemoveAsync(Guid id)
         {
-            var stockModel = await _context.Stocks.FirstOrDefaultAsync(x => x.Id == id);
-            if (stockModel is null) return null;
-            _context.Stocks.Remove(stockModel);
+            var record = await _context.Stocks.FirstOrDefaultAsync(x => x.Id == id);
+            if (record is null) return false;
+
+            _context.Stocks.Remove(record);
             await _context.SaveChangesAsync();
-            return stockModel;
+
+            return true;
         }
 
-        public async Task<Stock?> UpdateAsync(int id, UpdateStockRequestDto stockDto)
+        public async Task<bool> UpdateAsync(Guid id, UpdateStockRequestDto stockDto)
         {
-            var stockModel = await _context.Stocks.FirstOrDefaultAsync(x => x.Id == id);
-            if (stockModel is null) return null;
+            var record = await _context.Stocks.FirstOrDefaultAsync(x => x.Id == id);
+            if (record is null) return false;
 
-            stockModel.Industry = stockDto.Industry;
-            stockModel.CompanyName = stockDto.CompanyName;
-            stockModel.LastDiv = stockDto.LastDiv;
-            stockModel.MarketCap = stockDto.MarketCap;
-            stockModel.Purchase = stockDto.Purchase;
-            stockModel.Symbol = stockDto.Symbol;
-
+            record.Industry = stockDto.Industry;
+            record.CompanyName = stockDto.CompanyName;
+            record.LastDiv = stockDto.LastDiv;
+            record.MarketCap = stockDto.MarketCap;
+            record.Purchase = stockDto.Purchase;
+            record.Symbol = stockDto.Symbol;
+            _context.Stocks.Update(record);
             await _context.SaveChangesAsync();
-            return stockModel;
+
+            return true;
         }
 
-        public Task<bool> StockExists(int id)
+        public Task<bool> StockExists(Guid id)
         {
             return _context.Stocks.AnyAsync(x => x.Id == id);
         }

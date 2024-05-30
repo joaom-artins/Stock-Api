@@ -10,52 +10,53 @@ using Microsoft.EntityFrameworkCore;
 
 namespace api.Repository
 {
-    public class CommentRepository:ICommentRepository
+    public class CommentRepository(AppDbContext context) : ICommentRepository
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContext _context = context;
 
-        public CommentRepository(AppDbContext context)
-        {
-            _context=context;
-        }
-
-       
-
-        public async Task<List<Comment>> GetAllAsync()
+        public async Task<List<CommentModel>> GetAllAsync()
         {
             return await _context.Comments.ToListAsync();
         }
 
-        public async Task<Comment?> GetByIdAsync(int id){
-            var comment=await _context.Comments.FindAsync(id);
-            if(comment is null) return null;
-            return comment;
+        public async Task<CommentModel?> GetByIdAsync(Guid id)
+        {
+            var record = await _context.Comments.SingleOrDefaultAsync(x => x.Id == id);
+            if (record is null) return null;
+
+            return record;
         }
-    
-         public async Task<Comment> CreateAsync(Comment comment)
+
+        public async Task<bool> AddAsync(CommentModel comment)
         {
             await _context.Comments.AddAsync(comment);
             await _context.SaveChangesAsync();
-            return comment;
+
+            return true;
         }
 
-        public async Task<Comment?> UpdateAsync(int id, Comment comment)
+        public async Task<bool> UpdateAsync(Guid id, CommentModel comment)
         {
-            var commentModel=await _context.Comments.FindAsync(id);
-            if(commentModel is null) return null;
-            commentModel.Title=comment.Title;
-            commentModel.Content=comment.Content;
+            var record = await _context.Comments.SingleOrDefaultAsync(x => x.Id == id);
+            if (record is null) return false;
+
+            record.Title = comment.Title;
+            record.Content = comment.Content;
+            _context.Update(record);
             await _context.SaveChangesAsync();
-            return commentModel;
+
+            return true;
         }
 
-        public async Task<Comment?> RemoveAsync(int id)
+        public async Task<bool> RemoveAsync(Guid id)
         {
-            var commentModel=await _context.Comments.FindAsync(id);
-            if(commentModel is null) return null;
-            _context.Comments.Remove(commentModel);
+            var record = await _context.Comments.SingleOrDefaultAsync(x => x.Id == id);
+            if (record is null) return false;
+
+            _context.Comments.Remove(record);
             await _context.SaveChangesAsync();
-            return commentModel;
+
+            return true;
         }
     }
 }
